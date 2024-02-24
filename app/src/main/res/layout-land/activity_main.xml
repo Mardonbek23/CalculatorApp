@@ -49,10 +49,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
+                android:ellipsize="start"
                 android:fontFamily="@font/pretendard_semi_bold"
                 android:gravity="end|bottom"
+                android:maxLines="1"
                 android:paddingHorizontal="16dp"
-                android:text="30"
+                android:text="0"
                 android:textColor="@color/black"
                 android:textSize="36dp" />
 
@@ -65,7 +67,8 @@
                 android:paddingHorizontal="16dp"
                 android:text="0"
                 android:textColor="#767676"
-                android:textSize="24dp" />
+                android:textSize="24dp"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 
@@ -525,7 +528,7 @@
                         android:layout_height="match_parent"
                         android:fontFamily="@font/pretendard_regular"
                         android:gravity="center"
-                        android:text="log"
+                        android:text="lg"
                         android:textColor="@color/text_primary"
                         android:textSize="19dp" />
                 </com.google.android.material.card.MaterialCardView>
@@ -1092,7 +1095,7 @@
                         android:fontFamily="@font/pretendard_semi_bold"
                         android:gravity="center"
                         android:paddingBottom="6dp"
-                        android:text=","
+                        android:text="."
                         android:textColor="@color/text_primary"
                         android:textSize="24dp" />
                 </com.google.android.material.card.MaterialCardView>

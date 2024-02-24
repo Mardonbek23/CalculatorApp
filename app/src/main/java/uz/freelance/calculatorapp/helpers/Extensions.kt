@@ -10,3 +10,4 @@ fun valueOfItem(item: Item): Double {
         else -> item.value.toString().toDouble()
     }
 }
+inline fun <reified T> typeToken(): Class<T> = T::class.java
