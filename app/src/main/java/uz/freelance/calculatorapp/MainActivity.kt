@@ -13,6 +13,8 @@ import uz.freelance.calculatorapp.databinding.ActivityMainBinding
 import uz.freelance.calculatorapp.helpers.E
 import uz.freelance.calculatorapp.helpers.LocalData
 import uz.freelance.calculatorapp.helpers.PI
+import uz.freelance.calculatorapp.helpers.isComplexOperation
+import uz.freelance.calculatorapp.helpers.isNumber
 import uz.freelance.calculatorapp.helpers.typeToken
 import uz.freelance.calculatorapp.helpers.valueOfItem
 import uz.freelance.calculatorapp.models.Expression
@@ -78,22 +80,7 @@ class MainActivity : AppCompatActivity() {
                     Expression.CLOSE_PARENTHESIS
                 )
             }
-            cvSqrt?.setOnClickListener {
-                try {
-                    if (expresionsList.any { it.expression == Expression.DOT || it.expression == Expression.STRANGE_NUMBER_DOT }) {
-                        return@setOnClickListener
-                    }
-                    processList = ArrayList()
-                    processList.addAll(expresionsList)
-                    val toDouble = calculatingProcess().toString().toDouble()
-                    var result: String = Math.sqrt(toDouble).toString()
-                    if (result.endsWith(".0")) result = result.replace(".0", "")
-                    binding.tvResult.text = result
-
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+            cvSqrt?.setOnClickListener { buttonClicked("√(", Expression.SQRT) }
             cvSin?.setOnClickListener { buttonClicked("sin(", Expression.SIN) }
             cvCos?.setOnClickListener { buttonClicked("cos(", Expression.COS) }
             cvTan?.setOnClickListener { buttonClicked("tan(", Expression.TAN) }
@@ -102,38 +89,10 @@ class MainActivity : AppCompatActivity() {
             cvDivideToX?.setOnClickListener { buttonClicked("^(-1)", Expression.DIV1_TO_X) }
             cvPowE?.setOnClickListener { buttonClicked("e^(", Expression.E_IN_DEGREE_X) }
             cvPowSquare?.setOnClickListener {
-                try {
-                    if (expresionsList.any { it.expression == Expression.DOT || it.expression == Expression.STRANGE_NUMBER_DOT }) {
-                        return@setOnClickListener
-                    }
-                    processList = ArrayList()
-                    processList.addAll(expresionsList)
-                    val toDouble = calculatingProcess().toString().toDouble()
-                    var result: String = toDouble.pow(2.0).toString()
-                    if (result.endsWith(".0")) result = result.replace(".0", "")
-                    binding.tvResult.text = result
-
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                buttonClicked("^(2)", Expression.SQUARE)
             }
             cvXPowY?.setOnClickListener { buttonClicked("^(", Expression.IN_DEGREE_X) }
-            cvAbs?.setOnClickListener {
-                try {
-                    if (expresionsList.any { it.expression == Expression.DOT || it.expression == Expression.STRANGE_NUMBER_DOT }) {
-                        return@setOnClickListener
-                    }
-                    processList = ArrayList()
-                    processList.addAll(expresionsList)
-                    val toDouble = calculatingProcess().toString().toDouble()
-                    var result: String = abs(toDouble).toString()
-                    if (result.endsWith(".0")) result = result.replace(".0", "")
-                    binding.tvResult.text = result
-
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+            cvAbs?.setOnClickListener { buttonClicked("abs(", Expression.ABS) }
             cvPi?.setOnClickListener { buttonClicked("π", Expression.PI) }
             cvE?.setOnClickListener { buttonClicked("e", Expression.E) }
             cvRotate.setOnClickListener {
@@ -233,7 +192,7 @@ class MainActivity : AppCompatActivity() {
                         last.expression = Expression.MINUS
                         expresionsList[expresionsList.lastIndex] = last
                     } else expresionsList.add(Item(string, string, expression))
-                }
+                } else expresionsList.add(Item(string, string, expression))
             }
 
             Expression.MULTIPLY -> {
@@ -286,6 +245,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            Expression.SQUARE -> {
+                expresionsList.add(Item("^(", "^(,", Expression.IN_DEGREE_X))
+                expresionsList.add(Item("2", 2, Expression.NUMBER))
+                expresionsList.add(Item(")", ")", Expression.CLOSE_PARENTHESIS))
+            }
+
             else -> {
                 expresionsList.add(Item(string, string, expression))
             }
@@ -336,6 +301,7 @@ class MainActivity : AppCompatActivity() {
             }
             processList = ArrayList()
             processList.addAll(expresionsList)
+            createNegativeNumbers()
             var result: String = calculatingProcess().toString()
             if (result.endsWith(".0")) result = result.replace(".0", "")
             binding.tvResult.text = if (result.startsWith("=")) result else "=$result"
@@ -343,10 +309,52 @@ class MainActivity : AppCompatActivity() {
 
         } catch (e: Exception) {
             if (withResult) {
-                binding.tvResult.text = "=Error"
+                binding.tvResult.text = "=Error ${e.message}1"
             }
             binding.tvResult.visibility = View.VISIBLE
             e.printStackTrace()
+        }
+    }
+
+    private fun createNegativeNumbers() {
+        for (i in processList.indices) {
+            if (processList[i].expression == Expression.MINUS) {
+                if (i + 1 <= processList.lastIndex && (processList[i + 1].expression == Expression.NUMBER || processList[i + 1].expression == Expression.DOUBLE)) {
+                    if (i == 0) {
+                        if (processList[i + 1].expression == Expression.NUMBER) {
+                            processList[i + 1].value =
+                                processList[i + 1].value.toString().toLong() * (-1)
+                            processList[i + 1].name = processList[i + 1].value.toString()
+                            processList.removeAt(i)
+                            return createNegativeNumbers()
+                        } else if (processList[i + 1].expression == Expression.DOUBLE) {
+                            processList[i + 1].value =
+                                processList[i + 1].value.toString().toDouble() * (-1)
+                            processList[i + 1].name = processList[i + 1].value.toString()
+                            processList.removeAt(i)
+                            return createNegativeNumbers()
+                        }
+                        Log.d("loooooooog", "create negative: ${processList.map { it.value }}")
+                    } else {
+                        if (processList[i - 1].expression != Expression.DOUBLE && processList[i - 1].expression != Expression.NUMBER && processList[i - 1].expression != Expression.PI && processList[i - 1].expression != Expression.E) {
+                            if (processList[i + 1].expression == Expression.NUMBER) {
+                                processList[i + 1].value =
+                                    processList[i + 1].value.toString().toLong() * (-1)
+                                processList[i + 1].name = processList[i + 1].value.toString()
+                                processList.removeAt(i)
+                                return createNegativeNumbers()
+                            } else if (processList[i + 1].expression == Expression.DOUBLE) {
+                                processList[i + 1].value =
+                                    processList[i + 1].value.toString().toDouble() * (-1)
+                                processList[i + 1].name = processList[i + 1].value.toString()
+                                processList.removeAt(i)
+                                return createNegativeNumbers()
+                            }
+                            Log.d("loooooooog", "create negative: ${processList.map { it.value }}")
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -361,7 +369,7 @@ class MainActivity : AppCompatActivity() {
             val findPowX =
                 processList.find { it.expression == Expression.IN_DEGREE_X }
             val findComplexOperation =
-                processList.find { it.expression == Expression.SIN || it.expression == Expression.COS || it.expression == Expression.TAN || it.expression == Expression.LN || it.expression == Expression.LOG || it.expression == Expression.IN_DEGREE_X || it.expression == Expression.OPEN_PARENTHESIS || it.expression == Expression.E_IN_DEGREE_X || it.expression == Expression.DIV1_TO_X }
+                processList.find { it.expression == Expression.SIN || it.expression == Expression.COS || it.expression == Expression.TAN || it.expression == Expression.LN || it.expression == Expression.LOG || it.expression == Expression.IN_DEGREE_X || it.expression == Expression.OPEN_PARENTHESIS || it.expression == Expression.E_IN_DEGREE_X || it.expression == Expression.DIV1_TO_X || it.expression == Expression.SQRT || it.expression == Expression.ABS }
             val findMultiplyDivide =
                 processList.find { it.expression == Expression.MULTIPLY || it.expression == Expression.DIVIDE }
             val findPlusMinus =
@@ -405,6 +413,7 @@ class MainActivity : AppCompatActivity() {
                         "loooooooog",
                         "calculatingProcess op: ${findComplexOperation.expression}--${processList[indexOf].expression}"
                     )
+                    Log.d("loooooooog", "calculatingProcessX: ${processList.map { it.value }}")
                     val complexOperationResult = complexOperation(
                         valueOfItem(processList[indexOf + 1]),
                         findComplexOperation.expression
@@ -416,6 +425,7 @@ class MainActivity : AppCompatActivity() {
                     if (processList[indexOf + 1].expression == Expression.CLOSE_PARENTHESIS) processList.removeAt(
                         indexOf + 1
                     )
+                    createNegativeNumbers()
                     return calculatingProcess()
                 } else {
                     Log.d("loooooooog", "calculatingProcessX: ${processList.map { it.value }}")
@@ -504,14 +514,30 @@ class MainActivity : AppCompatActivity() {
                 return "I cant find +-*/"
             }
         } else if (processList.size == 2) {
+            createNegativeNumbers()
+            if (processList.size == 1) {
+                return valueOfItem(processList[0])
+            }
+            if (isComplexOperation(processList[0]) && isNumber(processList[1])) {
+                val complexOperation = complexOperation(
+                    processList[1].value.toString().toDouble(),
+                    processList[0].expression
+                )
+                processList.removeAt(1)
+                processList[0].value = complexOperation
+                processList[0].name = complexOperation.toString()
+                processList[0].expression = Expression.DOUBLE
+                return complexOperation
+            }
             if ((processList[0].expression == Expression.NUMBER || processList[0].expression == Expression.DOUBLE || processList[0].expression == Expression.E || processList[0].expression == Expression.PI) && processList[1].expression == Expression.DIV1_TO_X) {
                 return 1 / valueOfItem(processList[0])
             }
             return "=Error"
         } else if (processList.size == 1) {
             Log.d("loooooooog", "calculatingProcess:7 ${processList.map { it.value }}")
-            expresionsList = processList
-            return processList[0].value
+            expresionsList.clear()
+            expresionsList.addAll(processList)
+            return valueOfItem(processList[0])
         } else {
             return "0"
         }
@@ -539,12 +565,23 @@ class MainActivity : AppCompatActivity() {
     private fun complexOperation(a: Double, expression: Expression, b: Double = 1.0): Double {
         return when (expression) {
             Expression.SIN -> sin(Math.toRadians(a))
-            Expression.COS -> cos(Math.toRadians(a))
-            Expression.TAN -> tan(Math.toRadians(a))
+            Expression.COS -> {
+                val d = (a + 36000000) % 360
+                if (d == 90.0 || d == 270.0) 0.0
+                else cos(Math.toRadians(d))
+            }
+
+            Expression.TAN -> complexOperation(a, Expression.SIN) / complexOperation(
+                a,
+                Expression.COS
+            )
+
             Expression.LN -> ln(a)
             Expression.LOG -> log10(a)
             Expression.E_IN_DEGREE_X -> Math.E.pow(a)
             Expression.DIV1_TO_X -> 1 / a
+            Expression.SQRT -> a.pow(0.5)
+            Expression.ABS -> abs(a)
             else -> {
                 Log.d("loooooooog", "complexOperation: ElsSEEEEE")
                 a
@@ -561,7 +598,9 @@ class MainActivity : AppCompatActivity() {
                     it.expression == Expression.LN ||
                     it.expression == Expression.LOG ||
                     it.expression == Expression.E_IN_DEGREE_X ||
-                    it.expression == Expression.IN_DEGREE_X
+                    it.expression == Expression.IN_DEGREE_X ||
+                    it.expression == Expression.SQRT ||
+                    it.expression == Expression.ABS
         } ?: return null
         val indexOfLastComplexItem = processList.indexOfLast {
             it.expression == Expression.OPEN_PARENTHESIS ||
@@ -571,7 +610,9 @@ class MainActivity : AppCompatActivity() {
                     it.expression == Expression.LN ||
                     it.expression == Expression.LOG ||
                     it.expression == Expression.E_IN_DEGREE_X ||
-                    it.expression == Expression.IN_DEGREE_X
+                    it.expression == Expression.IN_DEGREE_X ||
+                    it.expression == Expression.SQRT ||
+                    it.expression == Expression.ABS
         }
         Log.d("loooooooog", "calculateInsideParenthesisGo: ")
         val subList = processList.subList(indexOfLastComplexItem, processList.lastIndex + 1)
